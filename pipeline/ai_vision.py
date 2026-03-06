@@ -10,7 +10,7 @@ from PIL import Image
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from config import Settings
-from logger import get_logger
+from logger import get_logger, safe_extra
 from utils import (
     PipelineError,
     dump_json,
@@ -74,7 +74,7 @@ def analyze_with_fallback(image_path: str | Path, settings: Settings) -> str:
     last_exc: Exception | None = None
     for provider in order:
         try:
-            logger.info("Attempting provider '%s'", provider)
+            logger.info("Attempting provider '%s'", provider, extra=safe_extra())
             if provider == "gemini":
                 return _call_gemini(image_path, settings)
             elif provider in ("groq", "cerebras"):
@@ -93,7 +93,7 @@ def analyze_with_fallback(image_path: str | Path, settings: Settings) -> str:
             else:
                 raise PipelineError(f"Unknown AI provider listed: {provider}")
         except Exception as exc:
-            logger.warning("AI provider %s failed: %s", provider, exc)
+            logger.warning("AI provider %s failed: %s", provider, exc, extra=safe_extra())
             last_exc = exc
             continue
     raise PipelineError("All AI providers failed.") from last_exc
@@ -104,7 +104,7 @@ def analyze_product_image(image_path: str | Path, settings: Settings) -> dict:
     response_text = analyze_with_fallback(image_path, settings)
     payload = extract_json_object(response_text, required_fields=REQUIRED_AI_FIELDS)
     normalized = validate_ai_payload(payload)
-    logger.info("AI output: %s", dump_json(normalized))
+    logger.info("AI output: %s", dump_json(normalized), extra=safe_extra())
     return normalized
 
 

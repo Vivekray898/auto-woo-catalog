@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from config import Settings
-from logger import get_logger
+from logger import get_logger, safe_extra
 from utils import PipelineError, build_feature_html, sleep_between_requests
 
 logger = get_logger()
@@ -58,7 +58,11 @@ def create_product(product_data: dict, media_id: int, category_id: int, seo_fiel
     payload = build_product_payload(product_data, media_id, category_id, seo_fields)
     auth = HTTPBasicAuth(settings.wc_consumer_key, settings.wc_consumer_secret)
 
-    logger.info("Creating WooCommerce draft product: %s", product_data["title"])
+    logger.info(
+        "Creating WooCommerce draft product: %s",
+        product_data["title"],
+        extra=safe_extra({"product_title": product_data.get("title", "-")}),
+    )
     sleep_between_requests(settings.request_delay_seconds)
     response = requests.post(
         settings.woocommerce_products_endpoint,
@@ -78,5 +82,9 @@ def create_product(product_data: dict, media_id: int, category_id: int, seo_fiel
     if not isinstance(product_id, int):
         raise PipelineError("WooCommerce response did not include a valid product ID.")
 
-    logger.info("WooCommerce product created successfully with id=%s", product_id)
+    logger.info(
+        "WooCommerce product created successfully with id=%s",
+        product_id,
+        extra=safe_extra({"product_title": product_data.get("title", "-"), "outcome": "success"}),
+    )
     return result

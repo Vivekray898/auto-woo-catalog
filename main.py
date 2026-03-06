@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from config import ConfigError, get_settings
-from logger import build_log_extra, get_logger
+from logger import build_log_extra, get_logger, safe_extra
 from pipeline.ai_vision import analyze_product_image
 from pipeline.category_mapper import CategoryMapper
 from pipeline.downloader import download_image
@@ -46,7 +46,7 @@ def collect_image_urls(args: argparse.Namespace, settings) -> list[str]:
 
         urls = list_r2_images(settings)
         if not urls:
-            logger.warning("R2 bucket contained no image URLs.")
+            logger.warning("R2 bucket contained no image URLs.", extra=safe_extra())
         return deduplicate(urls)
 
     image_urls = list(args.image_urls)
@@ -99,7 +99,7 @@ def _cleanup_downloaded_image(local_image: str | Path) -> None:
     try:
         image_path.unlink()
     except OSError as exc:
-        logger.warning("Failed to delete local image %s: %s", image_path, exc)
+        logger.warning("Failed to delete local image %s: %s", image_path, exc, extra=safe_extra())
 
 
 def main() -> int:
@@ -108,13 +108,14 @@ def main() -> int:
     try:
         settings = get_settings()
         category_mapper = CategoryMapper(settings)
-        image_urls = collect_image_urls(args)
+        # collect_image_urls requires the current settings for R2 lookup
+        image_urls = collect_image_urls(args, settings)
     except (ConfigError, PipelineError) as exc:
-        logger.error(str(exc))
+        logger.error(str(exc), extra=safe_extra())
         return 1
 
     result = BatchResult()
-    logger.info("Starting batch for %s image URLs", len(image_urls))
+    logger.info("Starting batch for %s image URLs", len(image_urls), extra=safe_extra())
 
     for index, image_url in enumerate(image_urls, start=1):
         result.processed += 1
@@ -122,7 +123,7 @@ def main() -> int:
             "[%s/%s] Processing image URL",
             index,
             len(image_urls),
-            extra=build_log_extra(image_url=image_url, outcome="started"),
+            extra=safe_extra(build_log_extra(image_url=image_url, outcome="started")),
         )
         try:
             product = process_url(image_url, category_mapper, settings)
@@ -131,7 +132,7 @@ def main() -> int:
             logger.error(
                 "Failed to process item: %s",
                 exc,
-                extra=build_log_extra(image_url=image_url, outcome="failure"),
+                extra=safe_extra(build_log_extra(image_url=image_url, outcome="failure")),
             )
             continue
         except Exception as exc:  # noqa: BLE001 - unexpected item failures should not kill the batch.
@@ -139,7 +140,7 @@ def main() -> int:
             logger.exception(
                 "Unexpected failure while processing item: %s",
                 exc,
-                extra=build_log_extra(image_url=image_url, outcome="failure"),
+                extra=safe_extra(build_log_extra(image_url=image_url, outcome="failure")),
             )
             continue
 
@@ -149,11 +150,13 @@ def main() -> int:
             product.get("id"),
             product.get("name"),
             product.get("permalink", "n/a"),
-            extra=build_log_extra(
-                product_title=product.get("name"),
-                image_url=image_url,
-                category_id=(product.get("categories") or [{}])[0].get("id", "-"),
-                outcome="success",
+            extra=safe_extra(
+                build_log_extra(
+                    product_title=product.get("name"),
+                    image_url=image_url,
+                    category_id=(product.get("categories") or [{}])[0].get("id", "-"),
+                    outcome="success",
+                )
             ),
         )
 
@@ -162,6 +165,7 @@ def main() -> int:
         result.processed,
         result.created,
         result.failed,
+        extra=safe_extra(),
     )
     return 0 if result.created else 1
 

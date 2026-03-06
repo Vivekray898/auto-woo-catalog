@@ -4,6 +4,8 @@ import logging
 import re
 from typing import Iterable
 
+from logger import safe_extra
+
 import boto3
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
@@ -57,5 +59,5 @@ def list_r2_images(settings: Settings) -> list[str]:
     except (BotoCoreError, ClientError) as exc:
         raise PipelineError(f"Error listing R2 bucket: {exc}") from exc
 
-    logger.info("Found %s images in R2 bucket %s", len(urls), bucket)
+    logger.info("Found %s images in R2 bucket %s", len(urls), bucket, extra=safe_extra())
     return urls

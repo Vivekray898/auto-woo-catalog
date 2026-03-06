@@ -25,19 +25,46 @@ class _ContextDefaultsFilter(logging.Filter):
         return True
 
 
+def safe_extra(extra: dict | None = None) -> dict[str, str]:
+    """Return a dictionary suitable for passing as the ``extra`` argument to
+    ``logging`` calls.
+
+    The pipeline formatter expects the following keys in ``extra``; when any
+    of them are missing we supply a safe ``"-"`` placeholder so that the
+    formatter never raises ``KeyError``.
+    """
+    defaults = {
+        "product_title": "-",
+        "image_url": "-",
+        "category_id": "-",
+        "outcome": "-",
+    }
+    if extra:
+        defaults.update(extra)
+    return defaults
+
+
 def build_log_extra(
     product_title: str | None = None,
     image_url: str | None = None,
     category_id: int | str | None = None,
     outcome: str | None = None,
 ) -> dict[str, str]:
-    """Create a consistent `extra` payload for structured pipeline logging."""
-    return {
-        "product_title": product_title or "-",
-        "image_url": image_url or "-",
-        "category_id": str(category_id) if category_id is not None else "-",
-        "outcome": outcome or "-",
-    }
+    """Create a consistent `extra` payload for structured pipeline logging.
+
+    This helper is used by the various pipeline modules when they already have
+    specific pieces of context. It simply wraps the values in
+    :func:`safe_extra` so that callers don't need to worry about missing
+    fields.
+    """
+    return safe_extra(
+        {
+            "product_title": product_title or "-",
+            "image_url": image_url or "-",
+            "category_id": str(category_id) if category_id is not None else "-",
+            "outcome": outcome or "-",
+        }
+    )
 
 
 def get_logger() -> logging.Logger:

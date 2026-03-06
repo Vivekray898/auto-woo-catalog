@@ -8,7 +8,7 @@ from requests.auth import HTTPBasicAuth
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from config import Settings
-from logger import get_logger
+from logger import get_logger, safe_extra
 from utils import PipelineError
 
 logger = get_logger()
@@ -29,7 +29,11 @@ def upload_media(image_path: str | Path, seo_alt_text: str, settings: Settings) 
     mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     auth = HTTPBasicAuth(settings.wp_username, settings.wp_app_password)
 
-    logger.info("Uploading image to WordPress: %s", path.name)
+    logger.info(
+        "Uploading image to WordPress: %s",
+        path.name,
+        extra=safe_extra({"image_url": path.name}),
+    )
     with path.open("rb") as image_file:
         response = requests.post(
             settings.wordpress_media_endpoint,
@@ -54,5 +58,9 @@ def upload_media(image_path: str | Path, seo_alt_text: str, settings: Settings) 
     if not isinstance(media_id, int):
         raise PipelineError("WordPress media response did not include a valid media ID.")
 
-    logger.info("WordPress upload succeeded with media_id=%s", media_id)
+    logger.info(
+        "WordPress upload succeeded with media_id=%s",
+        media_id,
+        extra=safe_extra({"image_url": path.name, "outcome": "success"}),
+    )
     return media_id

@@ -9,7 +9,7 @@ from PIL import Image, UnidentifiedImageError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from config import Settings
-from logger import get_logger
+from logger import get_logger, safe_extra
 from utils import PipelineError, ensure_directory, sanitize_filename
 
 logger = get_logger()
@@ -23,7 +23,7 @@ logger = get_logger()
 )
 def download_image(url: str, settings: Settings) -> Path:
     """Download, validate, and persist a product image locally."""
-    logger.info("Downloading image from %s", url)
+    logger.info("Downloading image from %s", url, extra=safe_extra({"image_url": url}))
     ensure_directory(settings.downloads_dir)
 
     response = requests.get(url, timeout=settings.request_timeout, stream=True)
@@ -49,5 +49,5 @@ def download_image(url: str, settings: Settings) -> Path:
         target_path.unlink(missing_ok=True)
         raise PipelineError(f"Downloaded file is not a valid image: {url}") from exc
 
-    logger.info("Saved validated image to %s", target_path)
+    logger.info("Saved validated image to %s", target_path, extra=safe_extra({"image_url": str(target_path)}))
     return target_path

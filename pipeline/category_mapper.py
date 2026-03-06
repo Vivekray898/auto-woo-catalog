@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from config import Settings
-from logger import get_logger
+from logger import get_logger, safe_extra
 from utils import normalize_category_key
 
 logger = get_logger()
@@ -79,7 +79,7 @@ class CategoryMapper:
         """Return the normalized category label and the WooCommerce category ID."""
         normalized = normalize_category_key(ai_category)
         if not normalized:
-            logger.warning("AI category missing, using Uncategorized fallback.")
+            logger.warning("AI category missing, using Uncategorized fallback.", extra=safe_extra())
             return "uncategorized", self.fallback_id
 
         alias_target = ALIASES.get(normalized, normalized)
@@ -90,5 +90,5 @@ class CategoryMapper:
             if alias_target in category_name or category_name in alias_target:
                 return category_value
 
-        logger.warning("No category mapping found for '%s', using Uncategorized fallback.", ai_category)
+        logger.warning("No category mapping found for '%s', using Uncategorized fallback.", ai_category, extra=safe_extra())
         return "uncategorized", self.fallback_id
