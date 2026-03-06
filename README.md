@@ -207,7 +207,7 @@ Logs usually contain enough detail to diagnose the problem. For persistent issue
 
 ## 🌟 Contributors
 
-- Original author: _your name here_
+- Original author: V
 - Contributions welcome via pull requests!
 
 ---
