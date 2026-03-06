@@ -32,11 +32,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("image_urls", nargs="*", help="Direct product image URLs.")
     parser.add_argument("--input-file", help="Text file with one image URL per line.")
     parser.add_argument("--csv", help="CSV file containing image URLs.")
+    parser.add_argument("--r2", action="store_true", help="Automatically fetch image URLs from configured Cloudflare R2 bucket.")
     return parser.parse_args()
 
 
-def collect_image_urls(args: argparse.Namespace) -> list[str]:
-    """Merge URLs from CLI, TXT, and CSV sources into one deduplicated batch."""
+def collect_image_urls(args: argparse.Namespace, settings) -> list[str]:
+    """Merge URLs from various sources into one deduplicated list.
+
+    If --r2 is set, list from R2 bucket instead of other inputs.
+    """
+    if args.r2:
+        from pipeline.r2_reader import list_r2_images
+
+        urls = list_r2_images(settings)
+        if not urls:
+            logger.warning("R2 bucket contained no image URLs.")
+        return deduplicate(urls)
+
     image_urls = list(args.image_urls)
     if args.input_file:
         image_urls.extend(load_urls_from_text_file(args.input_file))
@@ -45,7 +57,7 @@ def collect_image_urls(args: argparse.Namespace) -> list[str]:
 
     urls = deduplicate(image_urls)
     if not urls:
-        raise PipelineError("No image URLs supplied. Use CLI args, --input-file, or --csv.")
+        raise PipelineError("No image URLs supplied. Use CLI args, --input-file, --csv, or --r2.")
     return urls
 
 

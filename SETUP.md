@@ -77,6 +77,23 @@ auto_woo_catalog/
 
 5. **Prepare input files** in `inputs/`. The text file should contain one image URL per line; the CSV should have a header like `image_url`.
 
+6. **Optional: configure Cloudflare R2** if you prefer automatic retrieval of image URLs.
+   * Set the following in `.env` (see example values above):
+     ```env
+     R2_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+     R2_ACCESS_KEY=...
+     R2_SECRET_KEY=...
+     R2_BUCKET=your_bucket_name
+     R2_PUBLIC_URL=https://pub-xxxx.r2.dev
+     ```
+   * When running, add the `--r2` flag and **do not** supply other URL arguments.
+     The script will list image objects from the bucket, filter by extension, and
+     convert keys into public URLs for processing.
+     ```powershell
+     python main.py --r2
+     ```
+     You can still mix `--r2` with others but it is not necessary.
+
    Example `inputs/image_urls.txt`:
    ```txt
    https://example.com/images/product-001.jpg

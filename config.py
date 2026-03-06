@@ -43,6 +43,13 @@ class Settings:
     log_dir: Path = LOG_DIR
     category_map_path: Path = CATEGORY_MAP_PATH
 
+    # Cloudflare R2 configuration (used when --r2 flag is provided)
+    r2_endpoint: str = ""
+    r2_access_key: str = ""
+    r2_secret_key: str = ""
+    r2_bucket: str = ""
+    r2_public_url: str = ""
+
     @property
     def ai_providers(self) -> list[str]:
         """Return the full list of supported AI providers in priority order."""
@@ -121,4 +128,9 @@ def get_settings() -> Settings:
         downloads_dir=Path(os.getenv("DOWNLOAD_DIR", str(DOWNLOAD_DIR))),
         log_dir=Path(os.getenv("LOG_DIR", str(LOG_DIR))),
         category_map_path=Path(os.getenv("CATEGORY_MAP_PATH", str(CATEGORY_MAP_PATH))),
+        r2_endpoint=_optional("R2_ENDPOINT"),
+        r2_access_key=_optional("R2_ACCESS_KEY"),
+        r2_secret_key=_optional("R2_SECRET_KEY"),
+        r2_bucket=_optional("R2_BUCKET"),
+        r2_public_url=_optional("R2_PUBLIC_URL"),
     )
